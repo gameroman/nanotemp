@@ -1,8 +1,15 @@
 {
   "name": "nanotemp",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "MIT",
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
@@ -13,7 +20,8 @@
   "scripts": {
     "lint": "oxlint",
     "format": "oxfmt",
-    "build": "tsdown"
+    "build": "tsdown",
+    "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "oxfmt": "^0.35.0",
@@ -23,8 +31,5 @@
   },
   "engines": {
     "node": ">=16.0.0"
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts"
+  }
 }
