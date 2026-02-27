@@ -2,12 +2,6 @@ import * as cnst from "node:constants";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-// import { promisify } from "node:util";
-
-import mkdirp from "mkdirp";
-import rimraf from "rimraf";
-
-const rimrafSync = rimraf.sync;
 
 interface OpenFile {
   path: string;
@@ -33,8 +27,8 @@ function promisify(callback) {
   let promiseCallback;
   const promise = new Promise(function (resolve, reject) {
     promiseCallback = function () {
-      var args = Array.from(arguments);
-      var err = args.shift();
+      const args = Array.from(arguments);
+      const err = args.shift();
       process.nextTick(function () {
         if (err) {
           reject(err);
@@ -49,7 +43,7 @@ function promisify(callback) {
   return [promise, promiseCallback] as const;
 }
 
-// oxlint-disable prefer-const
+// oxlint-disable-next-line prefer-const
 let dir: string = path.resolve(os.tmpdir());
 const RDWR_EXCL = cnst.O_CREAT | cnst.O_TRUNC | cnst.O_RDWR | cnst.O_EXCL;
 
@@ -73,22 +67,19 @@ function generateName(
   return path.join(affixes.dir || dir, name);
 }
 
-function parseAffixes(rawAffixes, defaultPrefix) {
-  let affixes: AffixOptions = { prefix: undefined, suffix: undefined };
-  if (rawAffixes) {
-    switch (typeof rawAffixes) {
-      case "string":
-        affixes.prefix = rawAffixes;
-        break;
-      case "object":
-        affixes = rawAffixes;
-        break;
-      default:
-        throw new Error("Unknown affix declaration: " + affixes);
-    }
-  } else {
+function parseAffixes(
+  rawAffixes?: string | AffixOptions,
+  defaultPrefix?: string,
+): AffixOptions {
+  const affixes: AffixOptions = { prefix: undefined, suffix: undefined };
+  if (!rawAffixes) {
     affixes.prefix = defaultPrefix;
+    return affixes;
   }
+  if (typeof rawAffixes === "object") {
+    return rawAffixes;
+  }
+  affixes.prefix = rawAffixes;
   return affixes;
 }
 
@@ -137,20 +128,20 @@ function attachExitListener(): void {
   }
 }
 
-function cleanupFilesSync() {
+function cleanupFilesSync(): number {
   if (!tracking) {
-    return false;
+    return 0;
   }
   let count = 0;
   let toDelete;
   while ((toDelete = filesToDelete.shift()) !== undefined) {
-    rimrafSync(toDelete, { maxBusyTries: 6 });
+    fs.rmSync(toDelete, { maxRetries: 6, recursive: true, force: true });
     count++;
   }
   return count;
 }
 
-function cleanupFiles(callback) {
+function cleanupFiles(callback: (err: Error | null, count?: number) => void) {
   const p = promisify(callback);
   const promise = p[0];
   callback = p[1];
@@ -165,7 +156,7 @@ function cleanupFiles(callback) {
     return promise;
   }
   let toDelete;
-  const rimrafCallback = function (err) {
+  const rimrafCallback: fs.NoParamCallback = function (err) {
     if (!left) {
       // Prevent processing if aborted
       return;
@@ -185,25 +176,29 @@ function cleanupFiles(callback) {
     }
   };
   while ((toDelete = filesToDelete.shift()) !== undefined) {
-    rimraf(toDelete, { maxBusyTries: 6 }, rimrafCallback);
+    fs.rm(
+      toDelete,
+      { maxRetries: 6, recursive: true, force: true },
+      rimrafCallback,
+    );
   }
   return promise;
 }
 
-function cleanupDirsSync() {
+function cleanupDirsSync(): number {
   if (!tracking) {
-    return false;
+    return 0;
   }
   let count = 0;
   let toDelete;
   while ((toDelete = dirsToDelete.shift()) !== undefined) {
-    rimrafSync(toDelete, { maxBusyTries: 6 });
+    fs.rmSync(toDelete, { maxRetries: 6, recursive: true, force: true });
     count++;
   }
   return count;
 }
 
-function cleanupDirs(callback) {
+function cleanupDirs(callback: (err: Error | null, count?: number) => void) {
   const p = promisify(callback);
   const promise = p[0];
   callback = p[1];
@@ -218,7 +213,7 @@ function cleanupDirs(callback) {
     return promise;
   }
   let toDelete;
-  const rimrafCallback = function (err) {
+  const rimrafCallback: fs.NoParamCallback = function (err) {
     if (!left) {
       // Prevent processing if aborted
       return;
@@ -238,7 +233,11 @@ function cleanupDirs(callback) {
     }
   };
   while ((toDelete = dirsToDelete.shift()) !== undefined) {
-    rimraf(toDelete, { maxBusyTries: 6 }, rimrafCallback);
+    fs.rm(
+      toDelete,
+      { maxRetries: 6, recursive: true, force: true },
+      rimrafCallback,
+    );
   }
   return promise;
 }
@@ -252,7 +251,7 @@ function cleanupSync(): boolean | Stats {
   return { files: fileCount, dirs: dirCount };
 }
 
-function cleanup(callback: (err: any, result: Stats) => void): void;
+function cleanup(callback: (err: any, result?: Stats) => void): void;
 function cleanup(): Promise<Stats>;
 
 function cleanup(callback?) {
@@ -283,12 +282,12 @@ function mkdir(
 ): void;
 function mkdir(affixes?: string | AffixOptions): Promise<string>;
 
-function mkdir(affixes?, callback?) {
+function mkdir(affixes?: string | AffixOptions, callback?) {
   const p = promisify(callback);
   const promise = p[0];
   callback = p[1];
   const dirPath = generateName(affixes, "d-");
-  mkdirp(dirPath, 0o700, (err) => {
+  fs.mkdir(dirPath, { mode: 0o700, recursive: true }, (err) => {
     if (!err) {
       deleteDirOnExit(dirPath);
     }
@@ -299,7 +298,7 @@ function mkdir(affixes?, callback?) {
 
 function mkdirSync(affixes?: string | AffixOptions): string {
   const dirPath = generateName(affixes, "d-");
-  mkdirp.sync(dirPath, 0o700);
+  fs.mkdirSync(dirPath, { mode: 0o700, recursive: true });
   deleteDirOnExit(dirPath);
   return dirPath;
 }
@@ -312,7 +311,7 @@ function open(
 ): void;
 function open(affixes?: string | AffixOptions): Promise<OpenFile>;
 
-function open(affixes?, callback?) {
+function open(affixes?: string | AffixOptions, callback?) {
   const p = promisify(callback);
   const promise = p[0];
   callback = p[1];
