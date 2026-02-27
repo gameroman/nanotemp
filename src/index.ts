@@ -17,9 +17,6 @@ interface AffixOptions {
   dir?: string | undefined;
 }
 
-//== helpers
-//
-
 function promisify(callback) {
   if (typeof callback === "function") {
     return [undefined, callback] as const;
@@ -242,7 +239,7 @@ function cleanupDirs(callback: (err: Error | null, count?: number) => void) {
   return promise;
 }
 
-function cleanupSync(): boolean | Stats {
+function cleanupSync(): false | Stats {
   if (!tracking) {
     return false;
   }
@@ -274,8 +271,6 @@ function cleanup(callback?) {
   return promise;
 }
 
-//== directories
-//
 function mkdir(
   affixes: string | AffixOptions | undefined,
   callback: (err: any, dirPath: string) => void,
@@ -303,8 +298,6 @@ function mkdirSync(affixes?: string | AffixOptions): string {
   return dirPath;
 }
 
-//== files
-//
 function open(
   affixes: string | AffixOptions | undefined,
   callback: (err: any, result: OpenFile) => void,
@@ -351,3 +344,4 @@ export {
   cleanupSync,
   createWriteStream,
 };
+export type { OpenFile, Stats, AffixOptions };
