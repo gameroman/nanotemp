@@ -13,6 +13,9 @@ import * as path from "node:path";
 
 import * as mktemp from "@nanotemp/quick-temp/mktemp";
 
+const win32 = process.platform === "win32";
+const WIN_MODE = 0o666;
+
 describe("exports", () => {
   it.each([
     "createDir",
@@ -64,7 +67,7 @@ describe("createXxx & createXxxSync", () => {
               }
 
               const actualMode = stat.mode & 0o777;
-              expect(actualMode).toStrictEqual(defaultMode);
+              expect(actualMode).toStrictEqual(win32 ? WIN_MODE : defaultMode);
               resolve();
             });
           });
@@ -96,7 +99,7 @@ describe("createXxx & createXxxSync", () => {
               }
 
               const actualMode = stat.mode & 0o777;
-              expect(actualMode).toStrictEqual(mode);
+              expect(actualMode).toStrictEqual(win32 ? WIN_MODE : mode);
               resolve();
             });
           });
@@ -122,7 +125,7 @@ describe("createXxx & createXxxSync", () => {
         // so check that the specified permission bits are applied
         const stat = await fs.promises.stat(resultPath);
         const actualMode = stat.mode & 0o777;
-        expect(actualMode).toStrictEqual(defaultMode);
+        expect(actualMode).toStrictEqual(win32 ? WIN_MODE : defaultMode);
       },
     );
     it.each([
@@ -144,7 +147,7 @@ describe("createXxx & createXxxSync", () => {
         // so check that the specified permission bits are applied
         const stat = await fs.promises.stat(resultPath);
         const actualMode = stat.mode & 0o777;
-        expect(actualMode).toStrictEqual(mode);
+        expect(actualMode).toStrictEqual(win32 ? WIN_MODE : mode);
       },
     );
     it.each([
@@ -165,7 +168,7 @@ describe("createXxx & createXxxSync", () => {
         // so check that the specified permission bits are applied
         const stat = fs.statSync(resultPath);
         const actualMode = stat.mode & 0o777;
-        expect(actualMode).toStrictEqual(defaultMode);
+        expect(actualMode).toStrictEqual(win32 ? WIN_MODE : defaultMode);
       },
     );
 
@@ -187,7 +190,7 @@ describe("createXxx & createXxxSync", () => {
         // so check that the specified permission bits are applied
         const stat = fs.statSync(resultPath);
         const actualMode = stat.mode & 0o777;
-        expect(actualMode).toStrictEqual(mode);
+        expect(actualMode).toStrictEqual(win32 ? WIN_MODE : mode);
       },
     );
 
