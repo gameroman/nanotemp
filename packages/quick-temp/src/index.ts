@@ -1,11 +1,9 @@
-const fs = require("node:fs");
-const path = require("node:path");
-const mktemp = require("./mktemp");
-const rimraf = require("rimraf");
-const underscoreString = require("underscore.string");
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-exports.makeOrRemake = makeOrRemake;
-function makeOrRemake(obj, prop, className) {
+import { createDirSync } from "./mktemp";
+
+function makeOrRemake(obj, prop: string, className?: string) {
   if (obj[prop] != null) {
     remake(obj, prop);
     return obj[prop];
@@ -13,35 +11,32 @@ function makeOrRemake(obj, prop, className) {
   return (obj[prop] = makeTmpDir(obj, prop, className));
 }
 
-exports.makeOrReuse = makeOrReuse;
-function makeOrReuse(obj, prop, className) {
+function makeOrReuse(obj, prop: string, className?: string) {
   if (obj[prop] != null) {
     return obj[prop];
   }
   return (obj[prop] = makeTmpDir(obj, prop, className));
 }
 
-exports.remake = remake;
-function remake(obj, prop) {
+function remake(obj, prop: string): void {
   const fullpath = obj[prop];
   if (fullpath != null) {
-    rimraf.sync(fullpath);
+    fs.rmSync(fullpath);
     fs.mkdirSync(fullpath);
   }
 }
 
-exports.remove = remove;
-function remove(obj, prop) {
+function remove(obj, prop: string): void {
   if (obj[prop] != null) {
-    rimraf.sync(obj[prop]);
+    fs.rmSync(obj[prop]);
   }
   obj[prop] = null;
 }
 
-function makeTmpDir(obj, prop, className) {
+function makeTmpDir(obj, prop: string, className?: string): string {
   if (className == null) className = obj.constructor && obj.constructor.name;
   const tmpDirName = prettyTmpDirName(className, prop);
-  return mktemp.createDirSync(path.join(findBaseDir(), tmpDirName));
+  return createDirSync(path.join(findBaseDir(), tmpDirName));
 }
 
 function currentTmp() {
@@ -63,17 +58,26 @@ function findBaseDir() {
   }
 }
 
-function cleanString(s) {
-  return underscoreString
-    .underscored(s || "")
+function underscored(str: string) {
+  return str
+    .trim()
+    .replace(/([a-z\d])([A-Z]+)/g, "$1_$2")
+    .replace(/[-\s]+/g, "_")
+    .toLowerCase();
+}
+
+function cleanString(s: string): string {
+  return underscored(s || "")
     .replace(/[^a-z_]/g, "")
     .replace(/^_+/, "");
 }
 
-function prettyTmpDirName(className, prop) {
+function prettyTmpDirName(className: string, prop: string) {
   let cleanClassName = cleanString(className);
   if (cleanClassName === "object") cleanClassName = "";
   if (cleanClassName) cleanClassName += "-";
   const cleanPropertyName = cleanString(prop);
   return cleanClassName + cleanPropertyName + "-XXXXXXXX.tmp";
 }
+
+export { makeOrRemake, makeOrReuse, remake, remove };

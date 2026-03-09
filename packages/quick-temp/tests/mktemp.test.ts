@@ -1,7 +1,8 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
+import * as mktemp from "@nanotemp/quick-temp/mktemp";
 import {
   afterEach,
   assert,
@@ -11,8 +12,6 @@ import {
   type MockInstance,
   vi,
 } from "vitest";
-
-import * as mktemp from "./index";
 
 describe("exports", () => {
   it.each([
